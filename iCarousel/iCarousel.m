@@ -181,6 +181,8 @@ CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     
     contentView = [[UIView alloc] initWithFrame:self.bounds];
     
+    frameView = [[NSMutableDictionary alloc] init];
+    
 #ifdef ICAROUSEL_IOS
     
     centerItemWhenSelected = YES;
@@ -377,6 +379,22 @@ CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     return NSNotFound;
 }
 
+- (NSInteger)indexOfItemInPoint:(CGPoint) point 
+{    
+    for (NSNumber *index in [frameView allKeys])
+    {       
+        int i = [index intValue];
+        CGRect frame = [[frameView objectForKey: index] CGRectValue];
+        if (CGRectContainsPoint(frame, point))
+        {
+            return i;
+        }
+    }    
+    return NSNotFound;
+}
+
+
+
 - (NSInteger)indexOfItemViewOrSubview:(UIView *)view
 {
     NSInteger index = [self indexOfItemView:view];
@@ -483,7 +501,7 @@ CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     return value;
 }
 
-- (CATransform3D)transformForItemView:(UIView *)view withOffset:(CGFloat)offset
+- (CATransform3D)transformForItemView:(UIView *)view withOffset:(CGFloat)offset andIndex:(int)index
 {   
     //set up base transform
     CATransform3D transform = CATransform3DIdentity;
@@ -510,7 +528,25 @@ CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
             }
             else
             {
-                return CATransform3DTranslate(transform, offset * itemWidth, 0.0f, 0.0f);
+                transform = CATransform3DTranslate(transform, offset * itemWidth, 0.0f, 0.0f);
+                
+                if (offset > 0) {
+                    
+                    float ratio = 1 - (offset * 0.2);
+                    float width = itemWidth * ratio;
+                    
+                    transform = CATransform3DTranslate(transform, offset * width, 0.0f, 0.0f);    
+                    transform = CATransform3DScale(transform, ratio,ratio, 0);
+                    
+                } else {
+                    
+                    float ratio = 1 + (offset * 0.2);
+                    float width = itemWidth * ratio;
+                    
+                    transform = CATransform3DTranslate(transform, offset * width, 0.0f, 0.0f);
+                    transform = CATransform3DScale(transform, ratio,ratio, 0);
+                }
+                return transform;
             }
         }
         case iCarouselTypeRotary:
@@ -827,10 +863,12 @@ NSComparisonResult compareViewDepth(UIView *view1, UIView *view2, iCarousel *sel
     }
     
     //calculate transform
-    CATransform3D transform = [self transformForItemView:view withOffset:offset];
+    CATransform3D transform = [self transformForItemView:view withOffset:offset andIndex:index];
     
     //transform view
     view.superview.layer.transform = transform;
+    
+    [frameView setObject:[NSValue valueWithCGRect: view.superview.layer.frame] forKey:[NSNumber numberWithInt: index]];
 }
 
 //for iOS
@@ -1062,6 +1100,7 @@ NSComparisonResult compareViewDepth(UIView *view1, UIView *view2, iCarousel *sel
         }
         view.frame = oldItemView.frame;
         [oldItemView removeFromSuperview];
+        containerView.frame = view.frame;
         [containerView addSubview:view];
     }
     else
@@ -1865,14 +1904,22 @@ NSComparisonResult compareViewDepth(UIView *view1, UIView *view2, iCarousel *sel
 
 - (void)didTap:(UITapGestureRecognizer *)tapGesture
 {
-    NSInteger index = [self indexOfItemView:[tapGesture.view.subviews lastObject]];
-    if (centerItemWhenSelected && index != self.currentItemIndex)
-    {
-        [self scrollToItemAtIndex:index animated:YES];
+    CGPoint point = [tapGesture locationInView: contentView];
+        
+    NSInteger index = [self indexOfItemInPoint:point];
+    
+    // If you tab outside the view, do nothing
+    if (index == NSNotFound) {
+        return;
     }
-    if ([delegate respondsToSelector:@selector(carousel:didSelectItemAtIndex:)])
-    {
-        [delegate carousel:self didSelectItemAtIndex:index];
+    
+    // If item is not in the middle, put if there
+    if (centerItemWhenSelected && index != self.currentItemIndex){
+        [self scrollToItemAtIndex:index animated:YES];
+        
+    // If item is in the middle
+    } else if ([delegate respondsToSelector:@selector(carousel:didSelectItemAtIndex:)]){
+        [delegate carousel:self didSelectItemAtIndex: self.currentItemIndex];
     }
 }
 

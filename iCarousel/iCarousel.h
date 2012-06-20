@@ -145,7 +145,7 @@ iCarouselTranformOption;
 @interface iCarousel : UIView
 
 //required for 32-bit Macs
-#ifdef __i386__
+
 {
 	@private
 	
@@ -193,8 +193,9 @@ iCarouselTranformOption;
 	BOOL vertical;
     BOOL ignorePerpendicularSwipes;
     NSInteger animationDisableCount;
+    NSMutableDictionary *frameView;
 }
-#endif
+
 
 @property (nonatomic, AH_WEAK) IBOutlet id<iCarouselDataSource> dataSource;
 @property (nonatomic, AH_WEAK) IBOutlet id<iCarouselDelegate> delegate;
@@ -211,7 +212,7 @@ iCarouselTranformOption;
 @property (nonatomic, assign) CGSize viewpointOffset;
 @property (nonatomic, readonly) NSInteger numberOfItems;
 @property (nonatomic, readonly) NSInteger numberOfPlaceholders;
-@property (nonatomic, assign) NSInteger currentItemIndex;
+@property (nonatomic, readonly) NSInteger currentItemIndex;
 @property (nonatomic, strong, readonly) UIView *currentItemView;
 @property (nonatomic, strong, readonly) NSArray *indexesForVisibleItems;
 @property (nonatomic, readonly) NSInteger numberOfVisibleItems;
@@ -233,9 +234,13 @@ iCarouselTranformOption;
 - (void)reloadItemAtIndex:(NSInteger)index animated:(BOOL)animated;
 - (UIView *)itemViewAtIndex:(NSInteger)index;
 - (NSInteger)indexOfItemView:(UIView *)view;
+- (NSInteger)indexOfItemInPoint:(CGPoint) point;
 - (NSInteger)indexOfItemViewOrSubview:(UIView *)view;
 - (CGFloat)offsetForItemAtIndex:(NSInteger)index;
 - (void)reloadData;
+
+- (void)setNumberOfVisibleItems:(NSInteger)_numberOfVisibleItems;
+
 
 #ifdef ICAROUSEL_IOS
 
